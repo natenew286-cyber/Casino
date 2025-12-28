@@ -18,9 +18,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install Python dependencies
-COPY requirements/ /app/requirements/
+COPY requirements.txt /app/
 RUN pip install --upgrade pip && \
-    pip install -r requirements/production.txt
+    pip install -r requirements.txt
 
 # Copy project
 COPY . /app/
