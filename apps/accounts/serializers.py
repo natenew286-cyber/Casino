@@ -85,3 +85,21 @@ class KYCUploadSerializer(serializers.Serializer):
     document_front = serializers.ImageField()
     document_back = serializers.ImageField(required=False)
     selfie_with_document = serializers.ImageField()
+
+
+class OTPVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp_code = serializers.CharField(min_length=6, max_length=6)
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8, write_only=True)

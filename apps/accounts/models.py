@@ -145,3 +145,54 @@ class LoginHistory(models.Model):
             models.Index(fields=['user', '-timestamp']),
         ]
         ordering = ['-timestamp']
+
+
+class OTP(models.Model):
+    """OTP for email verification and password reset"""
+    OTP_TYPES = (
+        ('EMAIL_VERIFICATION', 'Email Verification'),
+        ('PASSWORD_RESET', 'Password Reset'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps')
+    otp_code = models.CharField(max_length=6)
+    otp_type = models.CharField(max_length=20, choices=OTP_TYPES)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'otp_type', 'is_used']),
+            models.Index(fields=['otp_code', 'is_used']),
+        ]
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.otp_type} - {self.otp_code}"
+    
+    def is_valid(self):
+        """Check if OTP is valid (not used and not expired)"""
+        from django.utils import timezone
+        return not self.is_used and self.expires_at > timezone.now()
+
+
+class PasswordResetToken(models.Model):
+    """Password reset tokens"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['token', 'is_used']),
+            models.Index(fields=['user', 'is_used']),
+        ]
+        ordering = ['-created_at']
+    
+    def is_valid(self):
+        """Check if token is valid (not used and not expired)"""
+        from django.utils import timezone
+        return not self.is_used and self.expires_at > timezone.now()
