@@ -5,7 +5,7 @@ from .models import Wallet, WalletTransaction, Deposit, Withdrawal
 
 class WalletSerializer(serializers.ModelSerializer):
     """Serializer for wallet information"""
-available_balance = serializers.SerializerMethodField()
+    available_balance = serializers.SerializerMethodField()
     
     class Meta:
         model = Wallet
