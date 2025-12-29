@@ -41,8 +41,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.APIMiddleware',  # Custom API middleware (before CommonMiddleware)
-    'django.middleware.common.CommonMiddleware',
+    'core.middleware.APICommonMiddleware',  # Custom CommonMiddleware that skips API routes
+    'core.middleware.APIMiddleware',  # Custom API middleware to ensure JSON responses
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

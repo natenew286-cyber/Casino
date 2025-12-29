@@ -4,45 +4,36 @@ Custom middleware to handle API routes properly and prevent unwanted redirects
 from django.http import JsonResponse, Http404
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import resolve, Resolver404
+from django.middleware.common import CommonMiddleware
+from django.conf import settings
 from core.utils.responses import ErrorResponse
 from rest_framework import status
 
 
-class APIMiddleware(MiddlewareMixin):
+class APICommonMiddleware(CommonMiddleware):
     """
-    Middleware to handle API routes and prevent trailing slash redirects
-    Returns JSON responses for API routes instead of HTML redirects
+    Custom CommonMiddleware that completely disables APPEND_SLASH redirect for API routes
     """
-    
     def process_response(self, request, response):
-        """
-        Intercept redirects and HTML responses for API routes and return JSON instead
-        """
-        # Only process API routes
-        if not request.path.startswith('/api/'):
-            return response
-        
-        # If CommonMiddleware redirected (301/302) for API routes, return JSON 404 instead
-        if response.status_code in [301, 302]:
-            # Check if it's a trailing slash redirect
-            location = response.get('Location', '')
-            original_path = request.path
-            
-            # Check if redirecting to add trailing slash
-            if location.endswith('/') and not original_path.endswith('/'):
-                # Try to resolve the path with trailing slash
+        # For API routes, convert redirects to 404 JSON responses
+        if request.path.startswith('/api/'):
+            if response.status_code in [301, 302]:
+                # CommonMiddleware tried to redirect - convert to JSON 404
+                location = response.get('Location', '')
+                original_path = request.path
+                
+                # Check if the location path actually exists
                 try:
                     resolve(location)
-                    # Path exists with trailing slash - return helpful JSON message
+                    # Path exists with trailing slash
                     return ErrorResponse(
-                        message=f'The API endpoint "{original_path}" requires a trailing slash. Please use "{location}" instead. API endpoints should include trailing slashes (e.g., /api/auth/login/).',
+                        message=f'The API endpoint "{original_path}" requires a trailing slash. Please use "{location}" instead.',
                         status=status.HTTP_404_NOT_FOUND,
                         errors={
                             'path': original_path,
                             'correct_path': location,
                             'method': request.method,
-                            'suggestion': f'Use the correct path: {location}',
-                            'note': 'API endpoints require trailing slashes'
+                            'suggestion': f'Use: {location}'
                         }
                     )
                 except Resolver404:
@@ -56,8 +47,62 @@ class APIMiddleware(MiddlewareMixin):
                             'suggestion': 'Check API documentation at /swagger/ or /redoc/'
                         }
                     )
+            return response
+        # For non-API routes, use the default CommonMiddleware behavior
+        return super().process_response(request, response)
+
+
+class APIMiddleware(MiddlewareMixin):
+    """
+    Middleware to handle API routes and ensure JSON responses
+    """
+    
+    def process_response(self, request, response):
+        """
+        Intercept redirects and HTML responses for API routes and return JSON instead
+        """
+        # Only process API routes
+        if not request.path.startswith('/api/'):
+            return response
+        
+        # If we still got a redirect (shouldn't happen with APICommonMiddleware, but just in case)
+        if response.status_code in [301, 302]:
+            location = response.get('Location', '')
+            original_path = request.path
+            
+            # Try to resolve the path with trailing slash to see if it exists
+            path_with_slash = original_path if original_path.endswith('/') else original_path + '/'
+            path_without_slash = original_path.rstrip('/')
+            
+            # Try both paths
+            path_exists = False
+            correct_path = None
+            try:
+                resolve(path_with_slash)
+                path_exists = True
+                correct_path = path_with_slash
+            except Resolver404:
+                try:
+                    resolve(path_without_slash)
+                    path_exists = True
+                    correct_path = path_without_slash
+                except Resolver404:
+                    pass
+            
+            if path_exists and correct_path:
+                return ErrorResponse(
+                    message=f'The API endpoint "{original_path}" was not found. Did you mean "{correct_path}"? Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
+                    status=status.HTTP_404_NOT_FOUND,
+                    errors={
+                        'path': original_path,
+                        'suggested_path': correct_path,
+                        'method': request.method,
+                        'suggestion': f'Try: {correct_path}',
+                        'documentation': '/swagger/ or /redoc/'
+                    }
+                )
             else:
-                # Some other redirect - return JSON 404
+                # Path doesn't exist at all
                 return ErrorResponse(
                     message=f'The API endpoint "{original_path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
                     status=status.HTTP_404_NOT_FOUND,
