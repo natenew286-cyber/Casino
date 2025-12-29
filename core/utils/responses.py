@@ -8,6 +8,8 @@ class SuccessResponse(Response):
             'message': message,
             'data': data or {}
         }
+        # Ensure Content-Type is set to application/json
+        kwargs.setdefault('content_type', 'application/json')
         super().__init__(response_data, status=status, **kwargs)
 
 
@@ -18,4 +20,6 @@ class ErrorResponse(Response):
             'message': message,
             'errors': errors or {}
         }
+        # Ensure Content-Type is set to application/json
+        kwargs.setdefault('content_type', 'application/json')
         super().__init__(response_data, status=status, **kwargs)

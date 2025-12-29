@@ -27,7 +27,10 @@ class WalletView(generics.RetrieveAPIView):
         wallet = self.get_object()
         serializer = self.get_serializer(wallet)
         
-        return SuccessResponse(data=serializer.data)
+        return SuccessResponse(
+            data=serializer.data,
+            message=f'Wallet information retrieved successfully. Current balance: {wallet.balance} {wallet.currency}.'
+        )
 
 
 class TransactionHistoryView(generics.ListAPIView):
@@ -47,7 +50,10 @@ class TransactionHistoryView(generics.ListAPIView):
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(queryset, many=True)
-        return SuccessResponse(data=serializer.data)
+        return SuccessResponse(
+            data=serializer.data,
+            message=f'Transaction history retrieved successfully. Found {len(serializer.data)} transaction(s).'
+        )
 
 
 class DepositView(generics.CreateAPIView):
@@ -81,12 +87,13 @@ class DepositView(generics.CreateAPIView):
             completed_at=timezone.now()
         )
         
+        wallet = WalletService.get_user_wallet(request.user)
         return SuccessResponse(
             data={
                 'transaction': TransactionSerializer(transaction).data,
                 'deposit': DepositSerializer(deposit).data
             },
-            message='Deposit successful',
+            message=f'Deposit of {data["amount"]} {wallet.currency} processed successfully via {data["payment_method"]}. Your wallet balance has been updated.',
             status=status.HTTP_201_CREATED
         )
 
@@ -100,8 +107,9 @@ class WithdrawalView(generics.CreateAPIView):
         # Check KYC status
         if request.user.kyc_status != 'VERIFIED':
             return ErrorResponse(
-                message='KYC verification required for withdrawals',
-                status=status.HTTP_403_FORBIDDEN
+                message='KYC verification is required to process withdrawals. Please complete your identity verification by uploading your KYC documents through the KYC upload endpoint.',
+                status=status.HTTP_403_FORBIDDEN,
+                errors={'kyc_status': request.user.kyc_status, 'required_status': 'VERIFIED'}
             )
         
         # Check 2FA if enabled
@@ -132,10 +140,11 @@ class WithdrawalView(generics.CreateAPIView):
             metadata=data.get('metadata', {})
         )
         
+        wallet = WalletService.get_user_wallet(request.user)
         return SuccessResponse(
             data={
                 'withdrawal': WithdrawalSerializer(withdrawal).data
             },
-            message='Withdrawal request submitted',
+            message=f'Withdrawal request of {data["amount"]} {wallet.currency} via {data["payment_method"]} has been submitted successfully. Your request is pending review and will be processed within 24-48 hours.',
             status=status.HTTP_201_CREATED
         )
