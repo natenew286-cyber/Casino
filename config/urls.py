@@ -21,21 +21,16 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
     
-    # API Documentation
+    # API Documentation (keep trailing slashes for these)
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
-    # Health check (optional - requires django-health-check package)
-    # path('health/', include('health_check.urls')),
-    
-    # API routes (all should have trailing slashes in URL patterns)
-    path('api/auth/', include('apps.accounts.urls')),
-    path('api/wallet/', include('apps.wallet.urls')),
-    path('api/games/', include('apps.games.urls')),
-    path('api/admin/', include('apps.admin_panel.urls')),
-    
-    # Audit
-    path('api/audit/', include('apps.audit.urls')),
+    # API routes (NO trailing slashes)
+    path('api/auth', include('apps.accounts.urls')),
+    path('api/wallet', include('apps.wallet.urls')),
+    path('api/games', include('apps.games.urls')),
+    path('api/admin', include('apps.admin_panel.urls')),
+    path('api/audit', include('apps.audit.urls')),
 ]
 
 # Admin site customization
