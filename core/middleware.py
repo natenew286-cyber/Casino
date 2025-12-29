@@ -26,27 +26,27 @@ class APICommonMiddleware(CommonMiddleware):
                 try:
                     resolve(location)
                     # Path exists with trailing slash
-                    return ErrorResponse(
-                        message=f'The API endpoint "{original_path}" requires a trailing slash. Please use "{location}" instead.',
-                        status=status.HTTP_404_NOT_FOUND,
-                        errors={
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'The API endpoint "{original_path}" requires a trailing slash. Please use "{location}" instead.',
+                        'errors': {
                             'path': original_path,
                             'correct_path': location,
                             'method': request.method,
                             'suggestion': f'Use: {location}'
                         }
-                    )
+                    }, status=status.HTTP_404_NOT_FOUND)
                 except Resolver404:
                     # Path doesn't exist even with trailing slash
-                    return ErrorResponse(
-                        message=f'The API endpoint "{original_path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
-                        status=status.HTTP_404_NOT_FOUND,
-                        errors={
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'The API endpoint "{original_path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
+                        'errors': {
                             'path': original_path,
                             'method': request.method,
                             'suggestion': 'Check API documentation at /swagger/ or /redoc/'
                         }
-                    )
+                    }, status=status.HTTP_404_NOT_FOUND)
             return response
         # For non-API routes, use the default CommonMiddleware behavior
         return super().process_response(request, response)
@@ -90,41 +90,41 @@ class APIMiddleware(MiddlewareMixin):
                     pass
             
             if path_exists and correct_path:
-                return ErrorResponse(
-                    message=f'The API endpoint "{original_path}" was not found. Did you mean "{correct_path}"? Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
-                    status=status.HTTP_404_NOT_FOUND,
-                    errors={
+                return JsonResponse({
+                    'success': False,
+                    'message': f'The API endpoint "{original_path}" was not found. Did you mean "{correct_path}"? Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
+                    'errors': {
                         'path': original_path,
                         'suggested_path': correct_path,
                         'method': request.method,
                         'suggestion': f'Try: {correct_path}',
                         'documentation': '/swagger/ or /redoc/'
                     }
-                )
+                }, status=status.HTTP_404_NOT_FOUND)
             else:
                 # Path doesn't exist at all
-                return ErrorResponse(
-                    message=f'The API endpoint "{original_path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
-                    status=status.HTTP_404_NOT_FOUND,
-                    errors={
+                return JsonResponse({
+                    'success': False,
+                    'message': f'The API endpoint "{original_path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
+                    'errors': {
                         'path': original_path,
                         'method': request.method,
                         'suggestion': 'Check API documentation at /swagger/ or /redoc/'
                     }
-                )
+                }, status=status.HTTP_404_NOT_FOUND)
         
         # Ensure all API responses are JSON (not HTML)
         content_type = response.get('Content-Type', '')
         if content_type.startswith('text/html') and response.status_code >= 400:
             # If we got HTML error for an API route, return JSON error
-            return ErrorResponse(
-                message=f'An error occurred while processing the API request to "{request.path}".',
-                status=response.status_code if response.status_code >= 400 else status.HTTP_500_INTERNAL_SERVER_ERROR,
-                errors={
+            return JsonResponse({
+                'success': False,
+                'message': f'An error occurred while processing the API request to "{request.path}".',
+                'errors': {
                     'path': request.path,
                     'method': request.method,
                     'original_status': response.status_code
                 }
-            )
+            }, status=response.status_code if response.status_code >= 400 else status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return response

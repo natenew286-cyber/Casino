@@ -11,15 +11,15 @@ def handler404(request, exception):
     Custom 404 handler that returns JSON for API routes
     """
     if request.path.startswith('/api/'):
-        return ErrorResponse(
-            message=f'The API endpoint "{request.path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
-            status=status.HTTP_404_NOT_FOUND,
-            errors={
+        return JsonResponse({
+            'success': False,
+            'message': f'The API endpoint "{request.path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
+            'errors': {
                 'path': request.path,
                 'method': request.method,
                 'suggestion': 'Check API documentation at /swagger/ or /redoc/'
             }
-        )
+        }, status=status.HTTP_404_NOT_FOUND)
     # For non-API routes, return default Django 404
     from django.http import HttpResponseNotFound
     return HttpResponseNotFound('<h1>Page not found</h1>')
@@ -30,15 +30,15 @@ def handler500(request):
     Custom 500 handler that returns JSON for API routes
     """
     if request.path.startswith('/api/'):
-        return ErrorResponse(
-            message='An internal server error occurred while processing your request. Our team has been notified and is working to resolve the issue. Please try again later or contact support if the problem persists.',
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            errors={
+        return JsonResponse({
+            'success': False,
+            'message': 'An internal server error occurred while processing your request. Our team has been notified and is working to resolve the issue. Please try again later or contact support if the problem persists.',
+            'errors': {
                 'path': request.path,
                 'method': request.method,
                 'support': 'If this error persists, please contact support with the request details.'
             }
-        )
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     # For non-API routes, return default Django 500
     from django.http import HttpResponseServerError
     return HttpResponseServerError()
