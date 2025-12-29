@@ -17,7 +17,13 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
+from core.views import health_check
+
 urlpatterns = [
+    # Health check
+    path('health/', health_check, name='health-check'),
+    path('health', health_check), # Support no-slash for automated checks
+
     # Admin
     path('admin/', admin.site.urls),
     
