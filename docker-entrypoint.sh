@@ -158,7 +158,9 @@ if ! check_db_django; then
 fi
 
 # Apply migrations (will only apply if there are pending migrations)
+# Ensure accounts app is migrated first since other apps depend on it
 echo "Applying database migrations..."
+python manage.py migrate accounts --noinput
 python manage.py migrate --noinput
 
 # Collect static files (in case they weren't collected at build time)

@@ -58,12 +58,16 @@ DB_PORT=5432
 JWT_ACCESS_TOKEN_LIFETIME=900
 JWT_REFRESH_TOKEN_LIFETIME=604800
 
-# Email Configuration (Outlook SMTP)
-EMAIL_HOST=smtp-mail.outlook.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@outlook.com
-EMAIL_HOST_PASSWORD=your-email-password
+# Email Configuration
+# For Outlook: smtp-mail.outlook.com, port 587, TLS=True, SSL=False
+# For QQ: smtp.qq.com, port 465, TLS=False, SSL=True
+# For Gmail: smtp.gmail.com, port 587, TLS=True, SSL=False
+EMAIL_HOST=smtp.qq.com
+EMAIL_PORT=465
+EMAIL_USE_TLS=False
+EMAIL_USE_SSL=True
+EMAIL_HOST_USER=your-email@qq.com
+EMAIL_HOST_PASSWORD=your-email-authorization-code
 
 # Frontend URL (for password reset links)
 FRONTEND_URL=http://localhost:3000
@@ -316,13 +320,54 @@ When the access token expires:
 
 ## Email Configuration
 
-### Outlook SMTP Setup
+### Email Provider Setup
 
+The application supports multiple email providers. Configure the following environment variables:
+
+#### QQ Email Setup (Recommended for Chinese users)
+1. Use your QQ email address for `EMAIL_HOST_USER`
+2. Get an authorization code from QQ Mail settings:
+   - Go to QQ Mail → Settings → Account
+   - Enable "POP3/SMTP Service" or "IMAP/SMTP Service"
+   - Generate an authorization code (not your password)
+3. Configuration:
+   ```
+   EMAIL_HOST=smtp.qq.com
+   EMAIL_PORT=465
+   EMAIL_USE_TLS=False
+   EMAIL_USE_SSL=True
+   EMAIL_HOST_USER=your-email@qq.com
+   EMAIL_HOST_PASSWORD=your-authorization-code
+   ```
+
+#### Outlook SMTP Setup
 1. Use your Outlook email address for `EMAIL_HOST_USER`
 2. For Outlook, you may need to:
    - Enable "Less secure app access" or use an App Password
    - Use `smtp-mail.outlook.com` as the host
    - Port 587 with TLS enabled
+3. Configuration:
+   ```
+   EMAIL_HOST=smtp-mail.outlook.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=True
+   EMAIL_USE_SSL=False
+   EMAIL_HOST_USER=your-email@outlook.com
+   EMAIL_HOST_PASSWORD=your-email-password
+   ```
+
+#### Gmail Setup
+1. Use your Gmail address for `EMAIL_HOST_USER`
+2. Enable "Less secure app access" or use an App Password
+3. Configuration:
+   ```
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=True
+   EMAIL_USE_SSL=False
+   EMAIL_HOST_USER=your-email@gmail.com
+   EMAIL_HOST_PASSWORD=your-app-password
+   ```
 
 ### Testing Email
 
