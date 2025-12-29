@@ -18,7 +18,6 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install Python dependencies
-# Note: Installing as root during build is acceptable, we'll switch to non-root user later
 COPY requirements.txt /app/
 RUN pip install --upgrade pip --no-warn-script-location && \
     pip install --no-warn-script-location -r requirements.txt
@@ -26,7 +25,9 @@ RUN pip install --upgrade pip --no-warn-script-location && \
 # Create a non-root user for running the application
 RUN useradd -m -u 1000 appuser && \
     mkdir -p /app/staticfiles && \
-    chown -R appuser:appuser /app
+    mkdir -p /var/log/casino && \
+    chown -R appuser:appuser /app && \
+    chown -R appuser:appuser /var/log/casino
 
 # Copy project files
 COPY --chown=appuser:appuser . /app/

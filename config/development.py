@@ -1,4 +1,5 @@
 from .base import *
+from pathlib import Path
 
 DEBUG = False
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
@@ -20,6 +21,10 @@ DATABASES['default']['OPTIONS'] = {
     'connect_timeout': 10,
     'options': '-c statement_timeout=30000'
 }
+
+# Ensure log directory exists
+LOG_DIR = Path('/var/log/casino')
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Logging configuration for production
 LOGGING = {
