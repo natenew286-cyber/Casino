@@ -1,4 +1,5 @@
 config/__pycache__/
+core/__pycache__/
 venv/
 .cursor/rules/snyk_rules.mdc
 .env
