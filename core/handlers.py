@@ -10,7 +10,9 @@ def handler404(request, exception):
     """
     Custom 404 handler that returns JSON for API routes
     """
-    if request.path.startswith('/api/'):
+    # Check if it's an API route OR if the client explicitly asks for JSON
+    accepts_json = 'application/json' in request.headers.get('Accept', '')
+    if request.path.startswith('/api/') or accepts_json:
         return JsonResponse({
             'success': False,
             'message': f'The API endpoint "{request.path}" was not found. Please check the URL and ensure you are using the correct HTTP method (GET, POST, PUT, PATCH, DELETE). Visit /swagger/ for API documentation.',
