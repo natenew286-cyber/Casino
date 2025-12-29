@@ -157,10 +157,13 @@ if ! check_db_django; then
   exit 1
 fi
 
+# Create migrations if they don't exist
+echo "Creating migrations if needed..."
+python manage.py makemigrations --noinput || true
+
 # Apply migrations (will only apply if there are pending migrations)
-# Ensure accounts app is migrated first since other apps depend on it
+# Django will automatically handle dependencies and migrate accounts first
 echo "Applying database migrations..."
-python manage.py migrate accounts --noinput
 python manage.py migrate --noinput
 
 # Collect static files (in case they weren't collected at build time)
