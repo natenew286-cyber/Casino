@@ -82,12 +82,11 @@ DATABASES = {
     }
 }
 
-# Password hashing - Use Argon2
+# Password hashing - Use Argon2 (Django 4.2+ has built-in Argon2 support)
 PASSWORD_HASHERS = [
-    'django_argon2.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 

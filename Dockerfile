@@ -1,5 +1,5 @@
 # Multi-stage build for Django backend
-FROM python:3.12-slim as base
+FROM python:3.11-slim as base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -25,12 +25,19 @@ RUN pip install --upgrade pip && \
 # Copy project
 COPY . /app/
 
+# Copy and set up entrypoint script
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Collect static files (will be run at build time, can be overridden)
 RUN python manage.py collectstatic --noinput || true
 
 # Expose ports
 # 8000 for HTTP/WebSocket (daphne)
 EXPOSE 8000
+
+# Use entrypoint script to handle migrations before starting server
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Default command (can be overridden)
 # Using daphne for ASGI (supports both HTTP and WebSocket)
