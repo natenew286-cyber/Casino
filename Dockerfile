@@ -18,19 +18,25 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install Python dependencies
+# Note: Installing as root during build is acceptable, we'll switch to non-root user later
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN pip install --upgrade pip --no-warn-script-location && \
+    pip install --no-warn-script-location -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Create a non-root user for running the application
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/staticfiles && \
+    chown -R appuser:appuser /app
+
+# Copy project files
+COPY --chown=appuser:appuser . /app/
 
 # Copy and set up entrypoint script
-COPY docker-entrypoint.sh /app/
+COPY --chown=appuser:appuser docker-entrypoint.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Collect static files (will be run at build time, can be overridden)
-RUN python manage.py collectstatic --noinput || true
+# Switch to non-root user for runtime
+USER appuser
 
 # Expose ports
 # 8000 for HTTP/WebSocket (daphne)
