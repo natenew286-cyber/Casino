@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Max
 from django.conf import settings
 import uuid
 from decimal import Decimal
@@ -47,7 +48,7 @@ class GameRound(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='rounds')
-    round_number = models.BigAutoField(primary_key=False, editable=False)
+    round_number = models.BigIntegerField(editable=False)
     state = models.CharField(max_length=20, choices=ROUND_STATES, default='CREATED')
     server_seed_hash = models.CharField(max_length=64)  # SHA256 hash
     server_seed = models.CharField(max_length=64, blank=True)  # Revealed after round
@@ -65,6 +66,17 @@ class GameRound(models.Model):
             models.Index(fields=['-round_number']),
         ]
         ordering = ['-created_at']
+    
+    def save(self, *args, **kwargs):
+        """Auto-increment round_number per game if not set"""
+        if not self.round_number:
+            # Get the max round_number for this game
+            max_round = GameRound.objects.filter(game=self.game).aggregate(
+                max_round=Max('round_number')
+            )['max_round']
+            # Start from 1 if no rounds exist, otherwise increment
+            self.round_number = (max_round or 0) + 1
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.game.name} - Round {self.round_number}"

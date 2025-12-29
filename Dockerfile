@@ -23,7 +23,7 @@ COPY requirements.txt /app/
 RUN pip install --upgrade pip --no-warn-script-location && \
     pip install --no-warn-script-location -r requirements.txt
 
-# Create a non-root user for running the application
+# Create a non-root user for running their application
 RUN useradd -m -u 1000 appuser && \
     mkdir -p /app/staticfiles && \
     mkdir -p /var/log/casino && \
