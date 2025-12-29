@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Disable automatic slash appending for API routes
-APPEND_SLASH = False
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-development-key')
+
+# Disable automatic slash appending for API routes
+APPEND_SLASH = False
 
 # Application definition
 INSTALLED_APPS = [
@@ -44,8 +44,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.APICommonMiddleware',  # Custom CommonMiddleware that skips API routes
-    'core.middleware.APIMiddleware',  # Custom API middleware to ensure JSON responses
+    'django.middleware.common.CommonMiddleware',
+    'core.middleware.APIMiddleware',  # Custom API middleware for JSON responses
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -227,3 +227,7 @@ GAME_CONFIG = {
     'MAX_BET_AMOUNT': 10000.00,
     'DEFAULT_HOUSE_EDGE': 0.01,  # 1%
 }
+
+# JWT token lifetimes for response messages
+JWT_ACCESS_TOKEN_LIFETIME = int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME', 900))
+JWT_REFRESH_TOKEN_LIFETIME = int(os.getenv('JWT_REFRESH_TOKEN_LIFETIME', 604800))
