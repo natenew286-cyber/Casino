@@ -7,11 +7,12 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
+# Install system dependencies including multiple database check tools
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     libpq-dev \
     gcc \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
@@ -49,4 +50,3 @@ ENTRYPOINT ["/app/docker-entrypoint.sh"]
 # Default command (can be overridden)
 # Using daphne for ASGI (supports both HTTP and WebSocket)
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
-
