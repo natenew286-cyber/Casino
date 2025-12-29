@@ -22,7 +22,7 @@ def handler404(request, exception):
         )
     # For non-API routes, return default Django 404
     from django.http import HttpResponseNotFound
-    return HttpResponseNotFound()
+    return HttpResponseNotFound('<h1>Page not found</h1>')
 
 
 def handler500(request):

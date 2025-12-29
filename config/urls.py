@@ -28,7 +28,7 @@ urlpatterns = [
     # Health check (optional - requires django-health-check package)
     # path('health/', include('health_check.urls')),
     
-    # API routes
+    # API routes (all should have trailing slashes in URL patterns)
     path('api/auth/', include('apps.accounts.urls')),
     path('api/wallet/', include('apps.wallet.urls')),
     path('api/games/', include('apps.games.urls')),
@@ -42,3 +42,7 @@ urlpatterns = [
 admin.site.site_header = 'Casino Backend Administration'
 admin.site.site_title = 'Casino Backend Admin'
 admin.site.index_title = 'Welcome to Casino Backend Admin'
+
+# Custom error handlers for API routes
+handler404 = 'core.handlers.handler404'
+handler500 = 'core.handlers.handler500'
