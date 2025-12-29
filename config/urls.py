@@ -25,12 +25,12 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
-    # API routes (NO trailing slashes)
-    path('api/auth', include('apps.accounts.urls')),
-    path('api/wallet', include('apps.wallet.urls')),
-    path('api/games', include('apps.games.urls')),
-    path('api/admin', include('apps.admin_panel.urls')),
-    path('api/audit', include('apps.audit.urls')),
+    # API routes
+    path('api/auth/', include('apps.accounts.urls')),
+    path('api/wallet/', include('apps.wallet.urls')),
+    path('api/games/', include('apps.games.urls')),
+    path('api/admin/', include('apps.admin_panel.urls')),
+    path('api/audit/', include('apps.audit.urls')),
 ]
 
 # Admin site customization
