@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import User, OTP, PasswordResetToken
+from .tasks import send_email_task
 
 
 def generate_otp() -> str:
@@ -59,11 +60,10 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
 
 
 def send_otp_email(user: User, otp_code: str, otp_type: str) -> bool:
-    """Send OTP via email using Outlook SMTP"""
-    try:
-        if otp_type == 'EMAIL_VERIFICATION':
-            subject = 'Email Verification Code'
-            message = f'''
+    """Send OTP via email using Celery task"""
+    if otp_type == 'EMAIL_VERIFICATION':
+        subject = 'Email Verification Code'
+        message = f'''
 Hello {user.email},
 
 Your email verification code is: {otp_code}
@@ -75,9 +75,9 @@ If you did not request this code, please ignore this email.
 Best regards,
 Casino Team
 '''
-        elif otp_type == 'PASSWORD_RESET':
-            subject = 'Password Reset Code'
-            message = f'''
+    elif otp_type == 'PASSWORD_RESET':
+        subject = 'Password Reset Code'
+        message = f'''
 Hello {user.email},
 
 Your password reset code is: {otp_code}
@@ -89,21 +89,17 @@ If you did not request a password reset, please ignore this email.
 Best regards,
 Casino Team
 '''
-        else:
-            subject = 'Verification Code'
-            message = f'Your verification code is: {otp_code}'
-        
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-        return True
-    except Exception as e:
-        print(f"Error sending email: {str(e)}")
-        return False
+    else:
+        subject = 'Verification Code'
+        message = f'Your verification code is: {otp_code}'
+    
+    # Send asynchronously
+    send_email_task.delay(
+        subject=subject,
+        message=message,
+        recipient_list=[user.email]
+    )
+    return True
 
 
 def create_password_reset_token(user: User) -> PasswordResetToken:
@@ -144,34 +140,27 @@ def verify_password_reset_token(token: str) -> PasswordResetToken | None:
 
 
 def send_password_reset_email(user: User, reset_token: PasswordResetToken) -> bool:
-    """Send password reset link via email"""
-    try:
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token.token}"
-        
-        subject = 'Password Reset Request'
-        message = f'''
+    """Send password reset token via email using Celery task"""
+    subject = 'Password Reset Token'
+    message = f'''
 Hello {user.email},
 
-You requested to reset your password. Click the link below to reset it:
+You requested to reset your password. Use the token below to reset it in the app:
 
-{reset_url}
+{reset_token.token}
 
-This link will expire in 1 hour.
+This token will expire in 1 hour.
 
 If you did not request a password reset, please ignore this email.
 
 Best regards,
 Casino Team
 '''
-        
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-        return True
-    except Exception as e:
-        print(f"Error sending password reset email: {str(e)}")
-        return False
+    
+    # Send asynchronously
+    send_email_task.delay(
+        subject=subject,
+        message=message,
+        recipient_list=[user.email]
+    )
+    return True

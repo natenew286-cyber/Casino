@@ -17,10 +17,15 @@ def custom_exception_handler(exc, context):
     if response is not None:
         # Handle JSON parse errors specifically
         if isinstance(exc, ParseError):
+            detail = response.data.get('detail', str(exc))
+            # Clean up the detail message if it contains the raw "JSON parse error" prefix
+            if 'JSON parse error' in str(detail):
+                detail = 'The request body contains invalid JSON. Please ensure your JSON syntax is correct (check quotes, commas, and brackets).'
+            
             return ErrorResponse(
                 message='Invalid JSON format provided. Please check your request body.',
                 status=response.status_code,
-                errors={'detail': response.data.get('detail', str(exc))}
+                errors={'detail': detail}
             )
 
         # Handle validation errors (from serializers)
