@@ -1,6 +1,7 @@
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ParseError
 from core.utils.responses import ErrorResponse
 import logging
 
@@ -14,6 +15,14 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     
     if response is not None:
+        # Handle JSON parse errors specifically
+        if isinstance(exc, ParseError):
+            return ErrorResponse(
+                message='Invalid JSON format provided. Please check your request body.',
+                status=response.status_code,
+                errors={'detail': response.data.get('detail', str(exc))}
+            )
+
         # Handle validation errors (from serializers)
         if isinstance(response.data, dict):
             # Check if it's a validation error with field-specific errors
