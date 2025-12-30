@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken as JwtRefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.utils import timezone
 from django.contrib.auth import logout
@@ -84,7 +84,7 @@ class LoginView(APIView):
             )
         
         # Generate tokens
-        refresh = RefreshToken.for_user(user)
+        refresh = JwtRefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         
         # Create refresh token record
@@ -127,7 +127,7 @@ class LogoutView(APIView):
         refresh_token = request.data.get('refresh_token')
         if refresh_token:
             try:
-                token = RefreshToken(refresh_token)
+                token = JwtRefreshToken(refresh_token)
                 token.blacklist()
             except Exception:
                 pass
@@ -158,7 +158,7 @@ class RefreshTokenView(TokenRefreshView):
             )
         
         # Generate new tokens
-        refresh = RefreshToken.for_user(token_record.user)
+        refresh = JwtRefreshToken.for_user(token_record.user)
         access_token = str(refresh.access_token)
         
         # Update refresh token
