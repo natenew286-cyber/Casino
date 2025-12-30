@@ -21,6 +21,7 @@ from .services import (
     send_password_reset_email
 )
 import uuid
+import hashlib
 
 
 class RegisterView(generics.CreateAPIView):
@@ -109,7 +110,7 @@ class LoginView(APIView):
         return SuccessResponse(
             data={
                 'access_token': access_token,
-                'refresh_token': refresh_token_record.token,
+                'refresh_token': str(refresh),
                 'user': UserSerializer(user).data,
                 'token_info': {
                     'access_token_expires_in': settings.JWT_ACCESS_TOKEN_LIFETIME,
@@ -160,16 +161,17 @@ class RefreshTokenView(TokenRefreshView):
         # Generate new tokens
         refresh = JwtRefreshToken.for_user(token_record.user)
         access_token = str(refresh.access_token)
+        refresh_str = str(refresh)
         
         # Update refresh token
-        token_record.token = str(refresh)
+        token_record.token = hashlib.sha256(refresh_str.encode()).hexdigest()
         token_record.expires_at = timezone.now() + timezone.timedelta(days=7)
         token_record.save()
         
         return SuccessResponse(
             data={
                 'access_token': access_token,
-                'refresh_token': token_record.token,
+                'refresh_token': refresh_str,
                 'token_info': {
                     'access_token_expires_in': settings.JWT_ACCESS_TOKEN_LIFETIME,
                     'refresh_token_expires_in': settings.JWT_REFRESH_TOKEN_LIFETIME
