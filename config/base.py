@@ -48,7 +48,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'core.middleware.APICommonMiddleware',  # Custom CommonMiddleware that skips API routes
     'core.middleware.APIMiddleware',  # Custom API middleware to ensure JSON responses
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'core.middleware.APICsrfMiddleware',  # Custom CSRF middleware that exempts API routes and OPTIONS requests
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -255,6 +255,13 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+]
+# Cache preflight requests for 1 hour (3600 seconds)
+CORS_PREFLIGHT_MAX_AGE = 3600
+# Expose headers to the client
+CORS_EXPOSE_HEADERS = [
+    "content-type",
+    "authorization",
 ]
 
 # CSRF Trusted Origins

@@ -5,6 +5,7 @@ from django.http import JsonResponse, Http404
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import resolve, Resolver404
 from django.middleware.common import CommonMiddleware
+from django.middleware.csrf import CsrfViewMiddleware
 from django.conf import settings
 from core.utils.responses import ErrorResponse
 from rest_framework import status
@@ -128,3 +129,16 @@ class APIMiddleware(MiddlewareMixin):
             }, status=response.status_code if response.status_code >= 400 else status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return response
+
+
+class APICsrfMiddleware(CsrfViewMiddleware):
+    """
+    Custom CSRF middleware that exempts API routes and OPTIONS requests from CSRF protection.
+    This is standard for REST APIs that use token-based authentication.
+    """
+    def process_request(self, request):
+        # Exempt API routes and OPTIONS requests from CSRF protection
+        if request.path.startswith('/api/') or request.method == 'OPTIONS':
+            return None
+        # For non-API routes, use the default CSRF protection
+        return super().process_request(request)
