@@ -94,11 +94,17 @@ Casino Team
         message = f'Your verification code is: {otp_code}'
     
     # Send asynchronously
-    send_email_task.delay(
-        subject=subject,
-        message=message,
-        recipient_list=[user.email]
-    )
+    try:
+        send_email_task.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[user.email]
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to queue OTP email: {str(e)}")
+    
     return True
 
 
@@ -158,9 +164,15 @@ Casino Team
 '''
     
     # Send asynchronously
-    send_email_task.delay(
-        subject=subject,
-        message=message,
-        recipient_list=[user.email]
-    )
+    try:
+        send_email_task.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[user.email]
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to queue OTP email: {str(e)}")
+    
     return True
