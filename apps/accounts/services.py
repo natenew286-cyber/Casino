@@ -1,8 +1,11 @@
 import random
 import secrets
+import os
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from .models import User, OTP, PasswordResetToken
 from .tasks import send_email_task
 
@@ -61,46 +64,50 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
 
 def send_otp_email(user: User, otp_code: str, otp_type: str) -> bool:
     """Send OTP via email using Celery task"""
+    site_name = os.getenv('SITE_NAME', 'Casino')
+    
     if otp_type == 'EMAIL_VERIFICATION':
-        subject = 'Email Verification Code'
-        message = f'''
-Hello {user.email},
-
-Your email verification code is: {otp_code}
-
-This code will expire in 10 minutes.
-
-If you did not request this code, please ignore this email.
-
-Best regards,
-Casino Team
-'''
+        subject = os.getenv('EMAIL_VERIFICATION_SUBJECT', 'Email Verification Code')
+        template_name = 'emails/otp_email.html'
+        context = {
+            'user': user,
+            'otp_code': otp_code,
+            'expiry_minutes': getattr(settings, 'OTP_EXPIRY_MINUTES', 10),
+            'site_name': site_name,
+            'subject': subject
+        }
     elif otp_type == 'PASSWORD_RESET':
-        subject = 'Password Reset Code'
-        message = f'''
-Hello {user.email},
+        subject = os.getenv('PASSWORD_RESET_OTP_SUBJECT', 'Password Reset Code')
+        template_name = 'emails/otp_email.html'
+        context = {
+            'user': user,
+            'otp_code': otp_code,
+            'expiry_minutes': getattr(settings, 'OTP_EXPIRY_MINUTES', 10),
+            'site_name': site_name,
+            'subject': subject
+        }
+    
+    # Render email body
+    try:
+        html_message = render_to_string(template_name, context)
+        plain_message = strip_tags(html_message)
+    except Exception as e:
+        # Fallback if template fails
+        plain_message = f"Your OTP is {otp_code}"
+        html_message = None
 
-Your password reset code is: {otp_code}
-
-This code will expire in 10 minutes.
-
-If you did not request a password reset, please ignore this email.
-
-Best regards,
-Casino Team
-'''
     # Send asynchronously
     try:
         # Check if Celery worker is available/Redis is connected
-        # This is a basic check to fail fast if the broker is down
         from celery.exceptions import OperationalError
         import socket
         
         send_email_task.apply_async(
             kwargs={
                 'subject': subject,
-                'message': message,
-                'recipient_list': [user.email]
+                'message': plain_message,
+                'recipient_list': [user.email],
+                'html_message': html_message
             },
             retry=True,
             retry_policy={
@@ -113,13 +120,10 @@ Casino Team
     except (OperationalError, socket.error, ConnectionRefusedError) as e:
         import logging
         logger = logging.getLogger(__name__)
-        # Log the actual Redis URLs being used
         logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send OTP email to {user.email}.")
         logger.critical(f"  REDIS_URL from settings: {getattr(settings, 'REDIS_URL', 'NOT SET')}")
         logger.critical(f"  CELERY_BROKER_URL from settings: {getattr(settings, 'CELERY_BROKER_URL', 'NOT SET')}")
-        logger.critical(f"  CELERY_RESULT_BACKEND from settings: {getattr(settings, 'CELERY_RESULT_BACKEND', 'NOT SET')}")
         logger.critical(f"  Error: {str(e)}")
-        # TODO implement fallback mechanism to synchronous tasks
         return False
     except Exception as e:
         import logging
@@ -169,21 +173,24 @@ def verify_password_reset_token(token: str) -> PasswordResetToken | None:
 
 def send_password_reset_email(user: User, reset_token: PasswordResetToken) -> bool:
     """Send password reset token via email using Celery task"""
-    subject = 'Password Reset Token'
-    message = f'''
-Hello {user.email},
-
-You requested to reset your password. Use the token below to reset it in the app:
-
-{reset_token.token}
-
-This token will expire in 1 hour.
-
-If you did not request a password reset, please ignore this email.
-
-Best regards,
-Casino Team
-'''
+    subject = os.getenv('PASSWORD_RESET_SUBJECT', 'Password Reset Token')
+    site_name = os.getenv('SITE_NAME', 'Casino')
+    
+    context = {
+        'user': user,
+        'token': reset_token.token,
+        'expiry_hours': getattr(settings, 'PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 1),
+        'site_name': site_name,
+        'subject': subject
+    }
+    
+    # Render email body
+    try:
+        html_message = render_to_string('emails/password_reset_email.html', context)
+        plain_message = strip_tags(html_message)
+    except Exception as e:
+        plain_message = f"Your password reset token is {reset_token.token}"
+        html_message = None
     
     # Send asynchronously
     try:
@@ -193,8 +200,9 @@ Casino Team
         send_email_task.apply_async(
             kwargs={
                 'subject': subject,
-                'message': message,
-                'recipient_list': [user.email]
+                'message': plain_message,
+                'recipient_list': [user.email],
+                'html_message': html_message
             },
             retry=True,
             retry_policy={
@@ -207,11 +215,9 @@ Casino Team
     except (OperationalError, socket.error, ConnectionRefusedError) as e:
         import logging
         logger = logging.getLogger(__name__)
-        # Log the actual Redis URLs being used
         logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send password reset email to {user.email}.")
         logger.critical(f"  REDIS_URL from settings: {getattr(settings, 'REDIS_URL', 'NOT SET')}")
         logger.critical(f"  CELERY_BROKER_URL from settings: {getattr(settings, 'CELERY_BROKER_URL', 'NOT SET')}")
-        logger.critical(f"  CELERY_RESULT_BACKEND from settings: {getattr(settings, 'CELERY_RESULT_BACKEND', 'NOT SET')}")
         logger.critical(f"  Error: {str(e)}")
         return False
     except Exception as e:

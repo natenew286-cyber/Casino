@@ -54,7 +54,7 @@ class RegisterView(generics.CreateAPIView):
         
         return SuccessResponse(
             data={'user': UserSerializer(user).data},
-            message=f'Registration successful! A verification OTP has been sent to {email}. Please check your inbox and verify your email address within {settings.OTP_EXPIRY_MINUTES} minutes to activate your account.',
+        message=f'Registration successful! A verification OTP has been sent to {email}. Please check your inbox and verify your email address within {settings.OTP_EXPIRY_MINUTES} minutes to activate your account.',
             status=status.HTTP_201_CREATED
         )
 
