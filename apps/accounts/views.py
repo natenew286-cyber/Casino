@@ -323,7 +323,6 @@ class ResendOTPView(APIView):
         # Generate and send new OTP
         otp = create_otp(user, 'EMAIL_VERIFICATION', expiry_minutes=settings.OTP_EXPIRY_MINUTES)
         send_otp_email(user, otp.otp_code, 'EMAIL_VERIFICATION')
-        
         return SuccessResponse(
             message=f'A new verification OTP has been sent to {email}. Please check your inbox (and spam folder) for the code. The OTP will expire in {settings.OTP_EXPIRY_MINUTES} minutes.'
         )
