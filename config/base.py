@@ -171,6 +171,15 @@ SIMPLE_JWT = {
 # Redis Configuration
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
+# Log Redis configuration for debugging
+import logging
+logger = logging.getLogger(__name__)
+redis_url_env = os.getenv('REDIS_URL', 'NOT SET - using default')
+print(f"[REDIS CONFIG] REDIS_URL from environment: {redis_url_env}")
+print(f"[REDIS CONFIG] REDIS_URL being used: {REDIS_URL}")
+logger.info(f"REDIS_URL from environment: {redis_url_env}")
+logger.info(f"REDIS_URL being used: {REDIS_URL}")
+
 # Channels Configuration
 CHANNEL_LAYERS = {
     'default': {
@@ -186,6 +195,16 @@ CHANNEL_LAYERS = {
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
+celery_broker_env = os.getenv('CELERY_BROKER_URL', 'NOT SET - using REDIS_URL')
+celery_backend_env = os.getenv('CELERY_RESULT_BACKEND', 'NOT SET - using REDIS_URL')
+print(f"[CELERY CONFIG] CELERY_BROKER_URL from environment: {celery_broker_env}")
+print(f"[CELERY CONFIG] CELERY_BROKER_URL being used: {CELERY_BROKER_URL}")
+print(f"[CELERY CONFIG] CELERY_RESULT_BACKEND from environment: {celery_backend_env}")
+print(f"[CELERY CONFIG] CELERY_RESULT_BACKEND being used: {CELERY_RESULT_BACKEND}")
+logger.info(f"CELERY_BROKER_URL from environment: {celery_broker_env}")
+logger.info(f"CELERY_BROKER_URL being used: {CELERY_BROKER_URL}")
+logger.info(f"CELERY_RESULT_BACKEND from environment: {celery_backend_env}")
+logger.info(f"CELERY_RESULT_BACKEND being used: {CELERY_RESULT_BACKEND}")
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

@@ -113,10 +113,13 @@ Casino Team
     except (OperationalError, socket.error, ConnectionRefusedError) as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send OTP email to {user.email}. Error: {str(e)}")
-        # In a real production app, you might want to fallback to synchronous sending 
-        # or a secondary provider here if critical.
-        # For now, we return False to indicate failure.
+        # Log the actual Redis URLs being used
+        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send OTP email to {user.email}.")
+        logger.critical(f"  REDIS_URL from settings: {getattr(settings, 'REDIS_URL', 'NOT SET')}")
+        logger.critical(f"  CELERY_BROKER_URL from settings: {getattr(settings, 'CELERY_BROKER_URL', 'NOT SET')}")
+        logger.critical(f"  CELERY_RESULT_BACKEND from settings: {getattr(settings, 'CELERY_RESULT_BACKEND', 'NOT SET')}")
+        logger.critical(f"  Error: {str(e)}")
+        # TODO implement fallback mechanism to synchronous tasks
         return False
     except Exception as e:
         import logging
@@ -204,7 +207,12 @@ Casino Team
     except (OperationalError, socket.error, ConnectionRefusedError) as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send password reset email to {user.email}. Error: {str(e)}")
+        # Log the actual Redis URLs being used
+        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send password reset email to {user.email}.")
+        logger.critical(f"  REDIS_URL from settings: {getattr(settings, 'REDIS_URL', 'NOT SET')}")
+        logger.critical(f"  CELERY_BROKER_URL from settings: {getattr(settings, 'CELERY_BROKER_URL', 'NOT SET')}")
+        logger.critical(f"  CELERY_RESULT_BACKEND from settings: {getattr(settings, 'CELERY_RESULT_BACKEND', 'NOT SET')}")
+        logger.critical(f"  Error: {str(e)}")
         return False
     except Exception as e:
         import logging
