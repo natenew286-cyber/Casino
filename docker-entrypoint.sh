@@ -74,12 +74,12 @@ except Exception:
 END
 }
 
-# Check Redis connection
+# Check Valkey (Redis-compatible) connection
 check_redis() {
   python << END
 import sys
 import os
-import redis
+import valkey
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
@@ -88,7 +88,7 @@ load_dotenv()
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 try:
     # simple parsing
-    r = redis.from_url(redis_url, socket_timeout=2)
+    r = valkey.from_url(redis_url, socket_timeout=2)
     r.ping()
     sys.exit(0)
 except Exception as e:
@@ -170,31 +170,31 @@ if [ $attempt -eq $max_attempts ]; then
   exit 1
 fi
 
-# Wait for Redis to be ready
-echo "Waiting for Redis to be ready..."
+# Wait for Valkey (Redis-compatible) to be ready
+echo "Waiting for Valkey to be ready..."
 redis_attempts=30
 r_attempt=0
 
 while [ $r_attempt -lt $redis_attempts ]; do
   if check_redis; then
-    echo "✓ Redis is ready!"
+    echo "✓ Valkey is ready!"
     break
   fi
   
   r_attempt=$((r_attempt + 1))
-  echo "  Redis unavailable (attempt $r_attempt/$redis_attempts) - retrying in 2s..."
+  echo "  Valkey unavailable (attempt $r_attempt/$redis_attempts) - retrying in 2s..."
   sleep 2
 done
 
 if [ $r_attempt -eq $redis_attempts ]; then
-  echo "✗ Redis connection failed after $redis_attempts attempts"
+  echo "✗ Valkey connection failed after $redis_attempts attempts"
   echo "Please check REDIS_URL environment variable."
-  # We don't exit here because sometimes Redis is optional or used only for caching/celery
+  # We don't exit here because sometimes Valkey is optional or used only for caching/celery
   # but strictly speaking if Celery is required, this is fatal.
   # Given the user's request, we will warn loudly but maybe let it proceed 
   # OR exit 1 if they want strict checking. 
   # For safety in this specific context (Celery worker crash loop), failure is better.
-  echo "CRITICAL: Redis is not reachable. Celery worker will likely fail."
+  echo "CRITICAL: Valkey is not reachable. Celery worker will likely fail."
   exit 1
 fi
 

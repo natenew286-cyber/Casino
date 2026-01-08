@@ -1,4 +1,4 @@
-import redis
+import valkey
 from django.conf import settings
 import logging
 
@@ -14,17 +14,17 @@ class RedisClient:
         return cls._instance
     
     def _initialize(self):
-        """Initialize Redis connection pool"""
+        """Initialize Valkey (Redis-compatible) connection pool"""
         try:
-            self.pool = redis.ConnectionPool.from_url(
+            self.pool = valkey.ConnectionPool.from_url(
                 settings.REDIS_URL,
                 max_connections=50,
                 decode_responses=True
             )
-            self.connection = redis.Redis(connection_pool=self.pool)
-            logger.info("Redis connection pool initialized")
+            self.connection = valkey.Redis(connection_pool=self.pool)
+            logger.info("Valkey connection pool initialized")
         except Exception as e:
-            logger.error(f"Failed to initialize Redis: {e}")
+            logger.error(f"Failed to initialize Valkey: {e}")
             raise
     
     def get_connection(self):

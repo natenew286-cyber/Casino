@@ -6,8 +6,8 @@ djangorestframework-simplejwt==5.3.0
 # Database
 psycopg2==2.9.7
 
-# Redis
-redis[hiredis]==5.0.1
+# Valkey (Redis-compatible)
+valkey[hiredis]==5.0.1
 
 # WebSocket & Channels
 channels==4.0.0
