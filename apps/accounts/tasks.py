@@ -11,7 +11,6 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
-load_dotenv()
 
 @shared_task
 def send_email_task(subject, message, recipient_list, html_message=None):
@@ -39,7 +38,7 @@ def send_email_task(subject, message, recipient_list, html_message=None):
             result = send_email(
                 sender_email=settings.EMAIL_HOST_USER,
                 sender_password=settings.EMAIL_HOST_PASSWORD,
-                recipient_email=recipient,  # Now a single string
+                recipient_email=recipient,
                 subject=subject,
                 body=message,
                 attachment_path=None
@@ -70,8 +69,14 @@ def send_email(sender_email, sender_password, recipient_email, subject, body, at
                 )
                 message.attach(part)
         
-        with smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT")) as server:
-            server.starttls()
+        email_host = settings.EMAIL_HOST
+        email_port = settings.EMAIL_PORT
+        email_use_tls = settings.EMAIL_USE_TLS
+        email_use_ssl = getattr(settings, 'EMAIL_USE_SSL', False)
+        
+        with smtplib.SMTP(email_host, email_port) as server:
+            if email_use_tls:
+                server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, recipient_email, message.as_string())
         
