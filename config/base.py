@@ -195,6 +195,14 @@ CHANNEL_LAYERS = {
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
+
+# Fix for Celery/Redis SSL issue: rediss:// URLs must have ssl_cert_reqs parameter
+if CELERY_BROKER_URL.startswith('rediss://') and 'ssl_cert_reqs' not in CELERY_BROKER_URL:
+    CELERY_BROKER_URL += '&ssl_cert_reqs=CERT_NONE' if '?' in CELERY_BROKER_URL else '?ssl_cert_reqs=CERT_NONE'
+
+if CELERY_RESULT_BACKEND.startswith('rediss://') and 'ssl_cert_reqs' not in CELERY_RESULT_BACKEND:
+    CELERY_RESULT_BACKEND += '&ssl_cert_reqs=CERT_NONE' if '?' in CELERY_RESULT_BACKEND else '?ssl_cert_reqs=CERT_NONE'
+
 celery_broker_env = os.getenv('CELERY_BROKER_URL', 'NOT SET - using REDIS_URL')
 celery_backend_env = os.getenv('CELERY_RESULT_BACKEND', 'NOT SET - using REDIS_URL')
 print(f"[CELERY CONFIG] CELERY_BROKER_URL from environment: {celery_broker_env}")
