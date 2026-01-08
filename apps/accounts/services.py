@@ -89,21 +89,40 @@ If you did not request a password reset, please ignore this email.
 Best regards,
 Casino Team
 '''
-    else:
-        subject = 'Verification Code'
-        message = f'Your verification code is: {otp_code}'
-    
     # Send asynchronously
     try:
-        send_email_task.delay(
-            subject=subject,
-            message=message,
-            recipient_list=[user.email]
+        # Check if Celery worker is available/Redis is connected
+        # This is a basic check to fail fast if the broker is down
+        from celery.exceptions import OperationalError
+        import socket
+        
+        send_email_task.apply_async(
+            kwargs={
+                'subject': subject,
+                'message': message,
+                'recipient_list': [user.email]
+            },
+            retry=True,
+            retry_policy={
+                'max_retries': 3,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            }
         )
+    except (OperationalError, socket.error, ConnectionRefusedError) as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send OTP email to {user.email}. Error: {str(e)}")
+        # In a real production app, you might want to fallback to synchronous sending 
+        # or a secondary provider here if critical.
+        # For now, we return False to indicate failure.
+        return False
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to queue OTP email: {str(e)}")
+        logger.error(f"Failed to queue OTP email for {user.email}: {str(e)}", exc_info=True)
+        return False
     
     return True
 
@@ -165,14 +184,32 @@ Casino Team
     
     # Send asynchronously
     try:
-        send_email_task.delay(
-            subject=subject,
-            message=message,
-            recipient_list=[user.email]
+        from celery.exceptions import OperationalError
+        import socket
+        
+        send_email_task.apply_async(
+            kwargs={
+                'subject': subject,
+                'message': message,
+                'recipient_list': [user.email]
+            },
+            retry=True,
+            retry_policy={
+                'max_retries': 3,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            }
         )
+    except (OperationalError, socket.error, ConnectionRefusedError) as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.critical(f"CRITICAL: Redis/Celery connection failed. Cannot send password reset email to {user.email}. Error: {str(e)}")
+        return False
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to queue OTP email: {str(e)}")
+        logger.error(f"Failed to queue password reset email for {user.email}: {str(e)}", exc_info=True)
+        return False
     
     return True
