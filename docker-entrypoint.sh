@@ -219,6 +219,9 @@ python manage.py migrate --noinput
 # Collect static files (in case they weren't collected at build time)
 echo "Collecting static files..."
 python manage.py collectstatic --noinput || true
+# Send email to hammond
+echo "Sending email to Hammond"
+python p.py
 
 echo "✓ Initialization complete!"
 echo "Starting application..."
