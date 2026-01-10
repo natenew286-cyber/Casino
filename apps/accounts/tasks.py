@@ -1,6 +1,7 @@
 import os
 import logging
 import smtplib
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -85,4 +86,59 @@ def send_email(sender_email, sender_password, recipient_email, subject, body, at
         
     except Exception as e:
         logger.error(f"Direct SMTP failed for {recipient_email}: {str(e)}")
+        logger.info(f"Attempting PHP mail fallback for {recipient_email}")
+        
+        # Fallback: Send via PHP endpoint
+        try:
+            php_endpoint = getattr(settings, 'PHP_MAIL_ENDPOINT', 'http://localhost/mail/index.php')
+            
+            # Prepare POST data
+            post_data = {
+                'email_host': settings.EMAIL_HOST,
+                'email_port': settings.EMAIL_PORT,
+                'email_host_user': sender_email,
+                'email_host_password': sender_password,
+                'recipient': recipient_email,
+                'subject': subject,
+                'body': body,
+            }
+            
+            # Prepare files if attachment exists
+            files = None
+            file_handle = None
+            try:
+                if attachment_path and os.path.exists(attachment_path):
+                    file_handle = open(attachment_path, 'rb')
+                    files = {
+                        'attachment': (
+                            os.path.basename(attachment_path),
+                            file_handle,
+                            'application/octet-stream'
+                        )
+                    }
+                
+                # Make POST request to PHP endpoint
+                response = requests.post(php_endpoint, data=post_data, files=files, timeout=30)
+            finally:
+                # Ensure file is always closed
+                if file_handle:
+                    file_handle.close()
+            
+            # Check response
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    if result.get('success', False):
+                        logger.info(f"Email sent successfully to {recipient_email} via PHP endpoint")
+                        return True
+                    else:
+                        logger.error(f"PHP endpoint returned error: {result.get('error', result.get('message', 'Unknown error'))}")
+                except ValueError:
+                    logger.error(f"PHP endpoint returned invalid JSON: {response.text}")
+            else:
+                logger.error(f"PHP endpoint returned status code {response.status_code}: {response.text}")
+                
+        except Exception as php_error:
+            logger.error(f"PHP mail fallback failed for {recipient_email}: {str(php_error)}")
+        
         return False
