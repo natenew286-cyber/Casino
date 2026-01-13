@@ -29,8 +29,8 @@ def create_otp(user: User, otp_type: str, expiry_minutes: int = None) -> OTP:
     if expiry_minutes is None:
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
     
-    # Use explicit UTC time for storage
-    expires_at = timezone.now().astimezone(timezone.utc) + timezone.timedelta(minutes=expiry_minutes)
+    # Use timezone.now() which is aware if USE_TZ=True
+    expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
     
     otp = OTP.objects.create(
         user=user,
@@ -46,37 +46,40 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
     """Verify an OTP code"""
     import logging
     from django.utils import timezone
-    from datetime import timedelta
     logger = logging.getLogger(__name__)
 
     try:
+        # Find the latest OTP matching the code and type for this user
+        # We don't filter by is_used=False initially to distinguish between
+        # "invalid code" vs "expired/used code" for logging
         otp = OTP.objects.filter(
             user=user,
-            otp_code=otp_code,
-            otp_type=otp_type,
-            is_used=False
+            otp_code=otp_code.strip(),
+            otp_type=otp_type
         ).order_by('-created_at').first()
         
         if not otp:
-            logger.warning(f"OTP not found for user {user.email} with code {otp_code}")
+            logger.warning(f"OTP verification failed: No OTP found for user {user.email} with code {otp_code}")
+            return False
+            
+        # Check usage
+        if otp.is_used:
+            logger.warning(f"OTP verification failed: OTP already used for user {user.email}")
             return False
         
-        # Explicit timezone check for debugging and safety
-        # Ensure we compare UTC with UTC
-        now = timezone.now().astimezone(timezone.utc)
-        
-        # Log for debugging
-        logger.info(f"Verifying OTP: Expiry(UTC)={otp.expires_at.astimezone(timezone.utc)}, Now(UTC)={now}")
-        
-        if otp.expires_at.astimezone(timezone.utc) <= now:
-            logger.warning(f"OTP expired. Expiry: {otp.expires_at}, Now: {now}, Diff: {now - otp.expires_at}")
+        # Check expiry
+        now = timezone.now()
+        if otp.expires_at <= now:
+            logger.warning(f"OTP verification failed: OTP expired. Expiry: {otp.expires_at}, Now: {now}")
             return False
-
-        # Mark OTP as used
+        
+        # Mark as used
         otp.is_used = True
         otp.save(update_fields=['is_used'])
         
+        logger.info(f"OTP verified successfully for user {user.email}")
         return True
+        
     except Exception as e:
         logger.error(f"Error verifying OTP: {str(e)}")
         return False
