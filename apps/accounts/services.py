@@ -72,13 +72,9 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
             logger.warning(f"OTP expired. Expiry: {otp.expires_at}, Now: {now}, Diff: {now - otp.expires_at}")
             return False
 
-        if not otp.is_valid():
-            logger.warning(f"OTP invalid check failed. Expiry: {otp.expires_at}, Now: {now}")
-            return False
-        
         # Mark OTP as used
         otp.is_used = True
-        otp.save()
+        otp.save(update_fields=['is_used'])
         
         return True
     except Exception as e:
