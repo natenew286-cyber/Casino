@@ -17,13 +17,6 @@ def generate_otp() -> str:
 
 def create_otp(user: User, otp_type: str, expiry_minutes: int = None) -> OTP:
     """Create and store an OTP for a user"""
-    # Deactivate previous OTPs of the same type
-    OTP.objects.filter(
-        user=user,
-        otp_type=otp_type,
-        is_used=False
-    ).update(is_used=True)
-    
     # Generate new OTP
     otp_code = generate_otp()
     if expiry_minutes is None:
@@ -49,9 +42,6 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
-        # Find the latest OTP matching the code and type for this user
-        # We don't filter by is_used=False initially to distinguish between
-        # "invalid code" vs "expired/used code" for logging
         otp = OTP.objects.filter(
             user=user,
             otp_code=otp_code.strip(),
