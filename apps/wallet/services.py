@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
 from django.core.cache import cache
 from core.exceptions import InsufficientFundsException
 from core.redis.locks import DistributedLock
@@ -80,7 +81,7 @@ class WalletService:
                     amount=amount,
                     lock_type='BET_PENDING',
                     reference_id=game_round_id,
-                    expires_at=timezone.now() + timezone.timedelta(minutes=5)
+                    expires_at=timezone.now() + timedelta(minutes=5)
                 )
                 
                 # Cache the response for idempotency
@@ -198,7 +199,7 @@ class WalletService:
                 amount=amount,
                 lock_type='WITHDRAWAL_PENDING',
                 reference_id=uuid.uuid4(),
-                expires_at=timezone.now() + timezone.timedelta(hours=24)
+                expires_at=timezone.now() + timedelta(hours=24)
             )
             
             # Clear balance cache

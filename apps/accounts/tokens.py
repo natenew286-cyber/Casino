@@ -1,4 +1,5 @@
 from django.utils import timezone
+from datetime import timedelta
 from .models import RefreshToken
 import hashlib
 
@@ -22,7 +23,7 @@ def create_refresh_token(user, token, device_id, ip_address, user_agent=''):
         device_id=device_id,
         ip_address=ip_address,
         user_agent=user_agent,
-        expires_at=timezone.now() + timezone.timedelta(days=7)
+        expires_at=timezone.now() + timedelta(days=7)
     )
     
     return refresh_token

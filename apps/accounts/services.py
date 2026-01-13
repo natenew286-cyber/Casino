@@ -1,6 +1,6 @@
-import random
 import secrets
 import os
+from datetime import timedelta
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -12,24 +12,35 @@ from .tasks import send_email_task
 
 def generate_otp() -> str:
     """Generate a 6-digit OTP"""
-    return str(random.randint(100000, 999999))
+    return f"{secrets.randbelow(900000) + 100000:06d}"
 
 
 def create_otp(user: User, otp_type: str, expiry_minutes: int = None) -> OTP:
     """Create and store an OTP for a user"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Generate new OTP
     otp_code = generate_otp()
     if expiry_minutes is None:
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
     
     # Use timezone.now() which is aware if USE_TZ=True
-    expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
+    expires_at = timezone.now() + timedelta(minutes=expiry_minutes)
+
+    # Invalidate any previous unused OTPs of the same type (avoid user confusion / multiple valid codes).
+    OTP.objects.filter(user=user, otp_type=otp_type, is_used=False).update(is_used=True)
     
     otp = OTP.objects.create(
         user=user,
         otp_code=otp_code,
         otp_type=otp_type,
         expires_at=expires_at
+    )
+
+    logger.info(
+        f"Created OTP for user {user.email} (type={otp_type}) "
+        f"expires_at={expires_at} (expiry_minutes={expiry_minutes})"
     )
     
     return otp
@@ -42,32 +53,53 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
-        otp = OTP.objects.filter(
-            user=user,
-            otp_code=otp_code.strip(),
-            otp_type=otp_type
-        ).order_by('-created_at').first()
-        
-        if not otp:
-            logger.warning(f"OTP verification failed: No OTP found for user {user.email} with code {otp_code}")
-            return False
-            
-        # Check usage
-        if otp.is_used:
-            logger.warning(f"OTP verification failed: OTP already used for user {user.email}")
-            return False
-        
-        # Check expiry
+        cleaned_code = (otp_code or "").strip()
         now = timezone.now()
-        if otp.expires_at <= now:
-            logger.warning(f"OTP verification failed: OTP expired. Expiry: {otp.expires_at}, Now: {now}")
+
+        # Only accept unused + unexpired OTPs (fast-path).
+        otp = (
+            OTP.objects.filter(
+                user=user,
+                otp_code=cleaned_code,
+                otp_type=otp_type,
+                is_used=False,
+                expires_at__gt=now,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not otp:
+            # Extra logging to help diagnose "invalid vs expired vs used".
+            latest = (
+                OTP.objects.filter(
+                    user=user,
+                    otp_code=cleaned_code,
+                    otp_type=otp_type,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+            if not latest:
+                logger.warning(
+                    f"OTP verification failed: No OTP found for user {user.email} (type={otp_type}) with code {cleaned_code!r}"
+                )
+            elif latest.is_used:
+                logger.warning(f"OTP verification failed: OTP already used for user {user.email} (type={otp_type})")
+            else:
+                logger.warning(
+                    f"OTP verification failed: OTP expired for user {user.email} (type={otp_type}). "
+                    f"Expiry: {latest.expires_at}, Now: {now}"
+                )
             return False
-        
-        # Mark as used
-        otp.is_used = True
-        otp.save(update_fields=['is_used'])
-        
-        logger.info(f"OTP verified successfully for user {user.email}")
+
+        # Mark as used atomically (prevents races / double verification).
+        updated = OTP.objects.filter(pk=otp.pk, is_used=False).update(is_used=True)
+        if updated != 1:
+            logger.warning(f"OTP verification failed: OTP already used (race) for user {user.email} (type={otp_type})")
+            return False
+
+        logger.info(f"OTP verified successfully for user {user.email} (type={otp_type})")
         return True
         
     except Exception as e:
@@ -157,7 +189,7 @@ def create_password_reset_token(user: User) -> PasswordResetToken:
     
     # Generate secure token
     token = secrets.token_urlsafe(32)
-    expires_at = timezone.now() + timezone.timedelta(hours=1)  # 1 hour expiry
+    expires_at = timezone.now() + timedelta(hours=1)  # 1 hour expiry
     
     reset_token = PasswordResetToken.objects.create(
         user=user,

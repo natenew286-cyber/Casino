@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken as JwtRefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.utils import timezone
+from datetime import timedelta
 from django.contrib.auth import logout
 from django.conf import settings
 from core.utils.responses import SuccessResponse, ErrorResponse
@@ -165,7 +166,7 @@ class RefreshTokenView(TokenRefreshView):
         
         # Update refresh token
         token_record.token = hashlib.sha256(refresh_str.encode()).hexdigest()
-        token_record.expires_at = timezone.now() + timezone.timedelta(days=7)
+        token_record.expires_at = timezone.now() + timedelta(days=7)
         token_record.save()
         
         return SuccessResponse(
