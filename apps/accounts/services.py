@@ -28,7 +28,9 @@ def create_otp(user: User, otp_type: str, expiry_minutes: int = None) -> OTP:
     otp_code = generate_otp()
     if expiry_minutes is None:
         expiry_minutes = getattr(settings, 'OTP_EXPIRY_MINUTES', 10)
-    expires_at = timezone.now() + timezone.timedelta(minutes=expiry_minutes)
+    
+    # Use explicit UTC time for storage
+    expires_at = timezone.now().astimezone(timezone.utc) + timezone.timedelta(minutes=expiry_minutes)
     
     otp = OTP.objects.create(
         user=user,
@@ -42,15 +44,36 @@ def create_otp(user: User, otp_type: str, expiry_minutes: int = None) -> OTP:
 
 def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
     """Verify an OTP code"""
+    import logging
+    from django.utils import timezone
+    from datetime import timedelta
+    logger = logging.getLogger(__name__)
+
     try:
-        otp = OTP.objects.get(
+        otp = OTP.objects.filter(
             user=user,
             otp_code=otp_code,
             otp_type=otp_type,
             is_used=False
-        )
+        ).order_by('-created_at').first()
         
+        if not otp:
+            logger.warning(f"OTP not found for user {user.email} with code {otp_code}")
+            return False
+        
+        # Explicit timezone check for debugging and safety
+        # Ensure we compare UTC with UTC
+        now = timezone.now().astimezone(timezone.utc)
+        
+        # Log for debugging
+        logger.info(f"Verifying OTP: Expiry(UTC)={otp.expires_at.astimezone(timezone.utc)}, Now(UTC)={now}")
+        
+        if otp.expires_at.astimezone(timezone.utc) <= now:
+            logger.warning(f"OTP expired. Expiry: {otp.expires_at}, Now: {now}, Diff: {now - otp.expires_at}")
+            return False
+
         if not otp.is_valid():
+            logger.warning(f"OTP invalid check failed. Expiry: {otp.expires_at}, Now: {now}")
             return False
         
         # Mark OTP as used
@@ -58,7 +81,8 @@ def verify_otp(user: User, otp_code: str, otp_type: str) -> bool:
         otp.save()
         
         return True
-    except OTP.DoesNotExist:
+    except Exception as e:
+        logger.error(f"Error verifying OTP: {str(e)}")
         return False
 
 

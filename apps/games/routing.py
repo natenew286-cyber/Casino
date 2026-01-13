@@ -1,16 +1,7 @@
-"""
-WebSocket routing configuration for games app.
-"""
-from django.urls import path
-
-# WebSocket URL patterns
-# Add your websocket consumers here as you implement them
-# Example:
-# from apps.games.consumers import GameConsumer
-# websocket_urlpatterns = [
-#     path('ws/games/<game_id>/', GameConsumer.as_asgi()),
-# ]
+from django.urls import re_path
+from . import consumers
 
 websocket_urlpatterns = [
-    # WebSocket routes will be added here as consumers are implemented
+    re_path(r'ws/game/(?P<room_name>\w+)/$', consumers.GameConsumer.as_asgi()),
+    re_path(r'ws/lobby/$', consumers.GameConsumer.as_asgi()), # Default lobby
 ]
